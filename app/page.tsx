@@ -1,103 +1,119 @@
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { ArrowRight, Play } from "lucide-react";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 
-export default function Home() {
+// Convert to async Server Component
+export default async function WelcomePage() {
+  const session = await getServerSession(authOptions);
+
+  // If user is logged in, redirect away from the welcome page
+  if (session) {
+    redirect('/auth/redirecting');
+  }
+
+  // If no session, show the welcome page content
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="relative flex align-items justify-center h-dvh overflow-hidden bg-background">
+      {/* Add Geometric Shapes (Positioned absolutely) */}
+      <div className="absolute top-[10%] left-[5%] h-4 w-4 rounded-full bg-primary/20 animate-pulse"></div>
+      <div className="absolute top-[20%] right-[10%] h-6 w-6 rounded-md bg-secondary/20 rotate-45 animate-spin-slow"></div>
+      <div className="absolute bottom-[15%] left-[15%] h-5 w-5 border-2 border-primary/30 rounded-sm"></div>
+      <div className="absolute bottom-[25%] right-[20%] h-3 w-3 bg-muted-foreground/20 rounded-full"></div>
+      {/* Simple triangle example */}
+      <div style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }} className="absolute top-[40%] left-[40%] h-5 w-5 bg-primary/10"></div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {/* Main Content Area (using grid for layout) */}
+      <main className="container relative z-10 flex flex-grow items-center px-4">
+        <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:gap-24 items-center w-full">
+          {/* Left side content (Text & CTAs) */}
+          <div className="flex flex-col items-start space-y-6">
+            {/* Optional Top Badge (like 70% off) */}
+            {/* <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm text-muted-foreground shadow-sm">
+              70% Off for first 3 months
+            </div> */}
+
+            {/* Main Heading (Restored Original Text) */}
+            <h2 className="text-2xl font-semibold text-primary">Hey, Bienvenue</h2>
+            <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+              PIGI
+            </h1>
+
+            {/* Sub-heading / Description (Restored Original Text) */}
+            <p className="text-lg leading-relaxed text-muted-foreground">
+              Votre plateforme centralisée pour [décrivez brièvement ce que fait PIGI].
+              Connectez-vous ou créez un compte pour commencer.
+            </p>
+
+            {/* Call-to-Action Buttons (Reused & Styled) */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-4">
+              <Button asChild size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6 py-3">
+                <Link href="/login">
+                  Se Connecter
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              {/* Secondary Button/Link Style */}
+              <Button asChild size="lg" variant="ghost" className="w-full sm:w-auto border-1 rounded-full border text-muted-foreground hover:text-foreground">
+                <Link href="/register">
+                  Créer un Compte
+                </Link>
+              </Button>
+            </div>
+          </div>
+
+          {/* Right side illustration Placeholder - Replaced with Image */}
+          <div className="relative ">
+
+            <div className="absolute w-72 h-72 md:w-72 md:h-72 -top-12 right-12 border-3 rounded-4xl" />
+          <div className="absolute w-72 h-72 md:w-72 md:h-72 -top-14 right-14 border-2 rounded-4xl" />
+          <div className="absolute w-72 h-72 md:w-72 md:h-72 -top-16 right-16 border-1 rounded-4xl" />
+
+            {/* <div className="absolute w-72 h-72 -top-22 -right-2 border-1  rounded-4xl" />
+          <div className="absolute w-72 h-72 -top-18 -right-6 border-1 bg-secondary rounded-4xl" /> */}
+
+            {/* <div className="absolute w-72 h-72 -bottom-14 -left-10 border-1 bg-primary rounded-4xl" />
+          <div className="absolute w-72 h-72 -bottom-16 -left-8 border-1 bg-primary rounded-4xl" /> */}
+
+
+            {/*
+              Image using Next.js Image component.
+              IMPORTANT: Make sure 'how.jpeg' has been moved to the /public folder!
+            */}
+            <div className="absolute w-72 h-72 md:w-72 md:h-72 -top-18 right-18">
+
+              <Image
+                src="/hoxi.jpeg"
+                alt="Illustration PIGI"
+                fill // Use fill to cover the parent div
+                className="object-contain rounded-4xl border-background border-3" // Use object-contain to show the whole image without cropping
+                priority // Add priority if it's above the fold
+              />
+            </div>
+            <div className="absolute  w-72 h-72 md:w-72 md:h-72 -bottom-20 -left-0" >
+              <div className="relative w-full h-full">
+                <div className="absolute w-32 h-32 md:w-32 md:h-32 -bottom-10 -left-10 border-3  rounded-4xl" />
+                <div className="absolute w-32 h-32 md:w-32 md:h-32 -top-10 -right-10 border-1 bg-secondary rounded-full" />
+
+
+                <Image
+                  src="/how.jpeg"
+                  alt="Illustration PIGI"
+                  fill // Use fill to cover the parent div
+                  className="object-contain rounded-4xl border-background border-3" // Use object-contain to show the whole image without cropping
+                  priority // Add priority if it's above the fold
+                />
+
+              </div>
+
+            </div>
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
