@@ -205,10 +205,10 @@ async function main() {
   usersData.push({
     id: adminUserId,
     email: 'admin@example.com',
-    name: 'Admin User',
-    hashedPassword: hashedPassword,
+      name: 'Admin User',
+      hashedPassword: hashedPassword,
     emailVerified: new Date(),
-    jobTitle: 'System Admin',
+      jobTitle: 'System Admin',
     departmentId: techDeptId,
     managerId: null,
     entryDate: faker.date.past({ years: 5 }),
@@ -227,7 +227,7 @@ async function main() {
     id: managerTechId,
     email: 'manager.tech@example.com',
     name: faker.person.fullName({ firstName: 'Bob', lastName: 'Martin' }),
-    hashedPassword: hashedPassword,
+      hashedPassword: hashedPassword,
     emailVerified: new Date(),
     jobTitle: 'Directeur Technique',
     departmentId: techDeptId,
@@ -248,7 +248,7 @@ async function main() {
     id: managerHRId,
     email: 'manager.hr@example.com',
     name: faker.person.fullName({ firstName: 'David', lastName: 'Lefebvre' }),
-    hashedPassword: hashedPassword,
+      hashedPassword: hashedPassword,
     emailVerified: new Date(),
     jobTitle: 'Responsable RH',
     departmentId: hrDeptId,
@@ -458,5 +458,5 @@ async function main() {
 
 main().catch((e) => {
   console.error('Error generating seed SQL:', e);
-  process.exit(1);
-}); 
+    process.exit(1);
+  }); 
