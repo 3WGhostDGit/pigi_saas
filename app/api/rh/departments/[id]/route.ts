@@ -17,7 +17,9 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const id = params.id
+    // Await params before accessing properties
+    const paramsObj = await params;
+    const id = paramsObj.id
 
     // Get department with related data
     const department = await prisma.department.findUnique({
@@ -92,7 +94,7 @@ export async function PUT(
     // Check if name is being changed and if it's already in use
     if (body.name && body.name !== existingDepartment.name) {
       const nameExists = await prisma.department.findFirst({
-        where: { 
+        where: {
           name: body.name,
           id: { not: id },
         },

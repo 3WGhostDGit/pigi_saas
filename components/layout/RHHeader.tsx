@@ -18,10 +18,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { User, LogOut as LogOutIcon, Search } from 'lucide-react';
+import { User, LogOut as LogOutIcon, Search, Settings, UserCircle } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 // RH-Specific Header: No title, subtle shadow, cleaner spacing
 export function RHHeader({ className }: { className?: string }) {
@@ -98,10 +99,24 @@ export function RHHeader({ className }: { className?: string }) {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
-                    <DropdownMenuItem disabled>
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </DropdownMenuItem>
+                    <Link href="/rh/profile" className="w-full">
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        <UserCircle className="mr-2 h-4 w-4" />
+                        <span>My Profile</span>
+                      </DropdownMenuItem>
+                    </Link>
+                    <Link href="/rh/profile/edit" className="w-full">
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Edit Profile</span>
+                      </DropdownMenuItem>
+                    </Link>
+                    <Link href="/rh/profile/settings" className="w-full">
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Settings</span>
+                      </DropdownMenuItem>
+                    </Link>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>

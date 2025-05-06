@@ -20,8 +20,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"; // Import Tooltip components
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Search, User, LogOut as LogOutIcon } from 'lucide-react'; // Use specific name for LogOut icon
+import { Menu, Search, User, LogOut as LogOutIcon, Settings, UserCircle } from 'lucide-react'; // Use specific name for LogOut icon
 import { useSession, signOut } from 'next-auth/react';
+import Link from "next/link";
 import { MobileSidebar } from '@/components/layout/MobileSidebar'; // Use alias path
 import { ThemeToggle } from "@/components/ui/theme-toggle"; // Import ThemeToggle
 
@@ -46,14 +47,14 @@ export function Header() {
       <header className="sticky top-0 z-40 w-full border-b bg-background">
         {/* Use container for padding, max-width can be adjusted */}
         <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
-          
+
           {/* Left side: Mobile Menu Trigger and Site Name */}
           <div className="flex gap-6 md:gap-10 items-center"> {/* Ensure vertical alignment */}
             <div className="md:hidden">
               <MobileSidebar />
             </div>
             <Link href="/" className="flex items-center space-x-2">
-              {/* <YourLogo className="h-6 w-6" /> */} 
+              {/* <YourLogo className="h-6 w-6" /> */}
               <span className="inline-block font-bold text-lg">PIGI</span> {/* Slightly larger font */}
             </Link>
             {/* Optional: Add main desktop nav links here if needed later */}
@@ -69,8 +70,8 @@ export function Header() {
                 className="md:w-[200px] lg:w-[300px] h-9" // Consistent height
               />
             </div>
-            
-            {/* Theme Toggle with Tooltip */} 
+
+            {/* Theme Toggle with Tooltip */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <div> {/* Wrap ThemeToggle for Tooltip trigger if it's not a direct button */}
@@ -80,9 +81,9 @@ export function Header() {
               <TooltipContent>
                 <p>Toggle Theme</p>
               </TooltipContent>
-            </Tooltip>         
+            </Tooltip>
 
-            {/* User Menu Dropdown with Tooltip */} 
+            {/* User Menu Dropdown with Tooltip */}
             <Tooltip>
               <TooltipTrigger asChild>
                 {/* DropdownMenu already contains a Button trigger, so Tooltip can wrap it directly */}
@@ -92,7 +93,7 @@ export function Header() {
                       variant="ghost"
                       className="relative h-9 w-9 rounded-full" // Consistent height
                     >
-                      <Avatar className="h-9 w-9"> {/* Consistent height */}                
+                      <Avatar className="h-9 w-9"> {/* Consistent height */}
                         <AvatarImage src={user.image ?? undefined} alt={user.name ?? 'User'} />
                         <AvatarFallback>{userInitial}</AvatarFallback>
                       </Avatar>
@@ -109,11 +110,24 @@ export function Header() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
-                      <DropdownMenuItem disabled> {/* Add links later */}
-                        <User className="mr-2 h-4 w-4" />
-                        <span>Profile</span>
-                      </DropdownMenuItem>
-                      {/* Add more items like Settings if needed */}
+                      <Link href="/rh/profile" className="w-full">
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                          <UserCircle className="mr-2 h-4 w-4" />
+                          <span>My Profile</span>
+                        </DropdownMenuItem>
+                      </Link>
+                      <Link href="/rh/profile/edit" className="w-full">
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                          <User className="mr-2 h-4 w-4" />
+                          <span>Edit Profile</span>
+                        </DropdownMenuItem>
+                      </Link>
+                      <Link href="/rh/profile/settings" className="w-full">
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Settings</span>
+                        </DropdownMenuItem>
+                      </Link>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut}>
@@ -132,4 +146,4 @@ export function Header() {
       </header>
     </TooltipProvider>
   );
-} 
+}

@@ -49,7 +49,9 @@ export function LoginForm() {
         });
       } else if (result?.ok) {
         toast.success("Connexion réussie!");
-        router.push('/auth/redirecting');
+        // Use the callbackUrl if provided, otherwise go to the root page
+        // The root page will handle the role/department-based redirection
+        router.push(callbackUrl);
       } else {
          toast.error("Erreur de connexion", {
           description: "Une erreur inconnue est survenue.",
@@ -100,4 +102,4 @@ export function LoginForm() {
       </form>
     </Form>
   );
-} 
+}

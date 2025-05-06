@@ -2,15 +2,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
+import { debugLog } from '@/lib/debug'
+import { createDebugPrismaClient, debugPrismaQuery } from '@/lib/prisma-debug'
 
-const prisma = new PrismaClient()
+// Use debug Prisma client in development, regular in production
+const prisma = process.env.NODE_ENV === 'development'
+  ? createDebugPrismaClient()
+  : new PrismaClient()
 
 // GET /api/rh/employees - Get all employees
 export async function GET(req: NextRequest) {
   try {
+    // Start debugging
+    debugLog('GET /api/rh/employees', { url: req.url });
+
     // Check authentication
     const session = await getServerSession(authOptions)
     if (!session) {
+      debugLog('Authentication failed', { session });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -22,6 +31,11 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const skip = (page - 1) * limit
+
+    debugLog('Query parameters', {
+      search, departmentId, status, page, limit, skip,
+      allParams: Object.fromEntries(searchParams.entries())
+    });
 
     // Build filter conditions
     const where: any = {}
@@ -42,18 +56,29 @@ export async function GET(req: NextRequest) {
       where.status = status
     }
 
-    // Get users with pagination
+    debugLog('Query filter conditions', { where });
+
+    // Get users with pagination using our debug wrapper
     const [users, total] = await Promise.all([
-      prisma.user.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { name: 'asc' },
-        include: {
-          department: true,
-        },
-      }),
-      prisma.user.count({ where }),
+      debugPrismaQuery('Find employees', () =>
+        prisma.user.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { name: 'asc' },
+          include: {
+            department: true,
+            roles: {
+              include: {
+                role: true
+              }
+            },
+          },
+        })
+      ),
+      debugPrismaQuery('Count employees', () =>
+        prisma.user.count({ where })
+      ),
     ])
 
     // Transform users to match the expected employee structure
@@ -67,6 +92,23 @@ export async function GET(req: NextRequest) {
       let positionId = 'pos_default';
       if (user.jobTitle && user.jobTitle.startsWith('pos_')) {
         positionId = user.jobTitle;
+      }
+
+      // Extract role names from the user roles
+      let roles = user.roles ? user.roles.map((userRole: any) => userRole.role.name) : [];
+
+      // If no roles are found, add a default role based on the user's position
+      if (roles.length === 0) {
+        // Add mock roles for testing based on user properties
+        if (user.managerId === null) {
+          roles = ['MANAGER', 'DEPT_MANAGER'];
+        } else if (user.jobTitle && user.jobTitle.toLowerCase().includes('manager')) {
+          roles = ['MANAGER'];
+        } else if (user.email && user.email.includes('admin')) {
+          roles = ['ADMIN'];
+        } else {
+          roles = ['EMPLOYEE'];
+        }
       }
 
       return {
@@ -83,10 +125,12 @@ export async function GET(req: NextRequest) {
         hireDate: user.entryDate || new Date().toISOString(),
         phone: '',
         address: '',
+        roles: roles, // Add roles to the employee object
       }
     })
 
-    return NextResponse.json({
+    // Prepare response
+    const response = {
       employees,
       pagination: {
         total,
@@ -94,13 +138,26 @@ export async function GET(req: NextRequest) {
         limit,
         totalPages: Math.ceil(total / limit),
       },
-    })
+    };
+
+    debugLog('Employees response', {
+      employeeCount: employees.length,
+      pagination: response.pagination,
+      firstEmployee: employees[0] || null
+    });
+
+    // Add a breakpoint here when debugging
+    // debugger;
+
+    return NextResponse.json(response);
   } catch (error) {
-    console.error('Error fetching employees:', error)
+    debugLog('Error fetching employees', { error });
+    console.error('Error fetching employees:', error);
+
     return NextResponse.json(
       { error: 'Failed to fetch employees' },
       { status: 500 }
-    )
+    );
   }
 }
 

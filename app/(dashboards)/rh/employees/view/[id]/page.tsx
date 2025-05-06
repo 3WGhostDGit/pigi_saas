@@ -14,9 +14,13 @@ import {
   CardFooter,
 } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, Edit, User } from "lucide-react"
+import { ArrowLeft, Edit, User, Mail, Phone, Building2, Briefcase, Calendar, Clock, Shield } from "lucide-react"
+import { RoleBadge } from "@/components/rh/RoleBadge"
+import { DepartmentBadge } from "@/components/rh/DepartmentBadge"
 import Link from "next/link"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 // Define the employee type
 interface Employee {
@@ -35,6 +39,14 @@ interface Employee {
   }
   status: string
   hireDate: string
+  roles: string[] // Make roles required, not optional
+  address?: string
+  joinDate?: string
+  emergencyContact?: {
+    name: string
+    relationship: string
+    phone: string
+  }
 }
 
 export default function ViewEmployeePage() {
@@ -204,60 +216,207 @@ export default function ViewEmployeePage() {
         </Link>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center space-x-4">
-            <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-10 w-10 text-primary" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <div className="flex items-center space-x-4">
+              <Avatar className="h-20 w-20">
+                <AvatarFallback className="bg-primary/10 text-primary text-xl">
+                  {`${employee.firstName.charAt(0)}${employee.lastName.charAt(0)}`.toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <CardTitle className="text-2xl">{`${employee.firstName} ${employee.lastName}`}</CardTitle>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="bg-primary/10 p-1 rounded-full">
+                    <Briefcase className="h-4 w-4 text-primary" />
+                  </div>
+                  <CardDescription className="text-base">{employee.position.title}</CardDescription>
+                </div>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  <RoleBadge user={employee} />
+                </div>
+              </div>
             </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
             <div>
-              <CardTitle className="text-2xl">{`${employee.firstName} ${employee.lastName}`}</CardTitle>
-              <CardDescription className="text-lg">{employee.position.title}</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div>
-            <h3 className="text-lg font-semibold mb-2">Contact Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Email</p>
-                <p>{employee.email}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Phone</p>
-                <p>{employee.phone || 'Not provided'}</p>
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          <div>
-            <h3 className="text-lg font-semibold mb-2">Employment Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Department</p>
-                <p>{employee.department.name}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Position</p>
-                <p>{employee.position.title}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Status</p>
-                <p>{formatStatus(employee.status)}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Hire Date</p>
-                <p>{formatDate(employee.hireDate)}</p>
+              <h3 className="text-lg font-semibold mb-3 flex items-center">
+                <Mail className="h-5 w-5 mr-2 text-muted-foreground" />
+                Contact Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-2">
+                <div className="flex items-start gap-3">
+                  <div className="bg-primary/10 p-1.5 rounded-full mt-0.5">
+                    <Mail className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Email</p>
+                    <p className="font-medium">{employee.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="bg-primary/10 p-1.5 rounded-full mt-0.5">
+                    <Phone className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Phone</p>
+                    <p className="font-medium">{employee.phone || 'Not provided'}</p>
+                  </div>
+                </div>
+                {employee.address && (
+                  <div className="flex items-start gap-3 md:col-span-2">
+                    <div className="bg-primary/10 p-1.5 rounded-full mt-0.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Address</p>
+                      <p className="font-medium">{employee.address}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
 
-          {/* Additional sections can be added here as needed */}
-        </CardContent>
-      </Card>
+            <Separator />
+
+            <div>
+              <h3 className="text-lg font-semibold mb-3 flex items-center">
+                <Building2 className="h-5 w-5 mr-2 text-muted-foreground" />
+                Employment Details
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-2">
+                <div className="flex items-start gap-3">
+                  <div className="bg-primary/10 p-1.5 rounded-full mt-0.5">
+                    <Building2 className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Department</p>
+                    <div className="flex items-center">
+                      <DepartmentBadge departmentName={employee.department.name} />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="bg-primary/10 p-1.5 rounded-full mt-0.5">
+                    <Briefcase className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Position</p>
+                    <p className="font-medium">{employee.position.title}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="bg-primary/10 p-1.5 rounded-full mt-0.5">
+                    <Clock className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Status</p>
+                    <Badge
+                      variant={employee.status === "ACTIVE" ? "default" :
+                              employee.status === "ON_LEAVE" ? "outline" : "destructive"}
+                      className={employee.status === "ON_LEAVE" ?
+                                "text-yellow-700 bg-yellow-100/80 border-yellow-300 dark:text-yellow-400 dark:bg-yellow-700/30 dark:border-yellow-600" : ""}
+                    >
+                      {formatStatus(employee.status)}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="bg-primary/10 p-1.5 rounded-full mt-0.5">
+                    <Calendar className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Hire Date</p>
+                    <p className="font-medium">{formatDate(employee.hireDate)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {employee.emergencyContact && (
+              <>
+                <Separator />
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-muted-foreground"><path d="M8 2h8"></path><path d="M9 2v2.789a4 4 0 0 1-.672 2.219l-.656.984A4 4 0 0 0 7 10.212V20a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-9.789a4 4 0 0 0-.672-2.219l-.656-.984A4 4 0 0 1 15 4.788V2"></path><path d="M7 15a6.472 6.472 0 0 1 5 0 6.47 6.47 0 0 0 5 0"></path></svg>
+                    Emergency Contact
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-2">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Name</p>
+                      <p className="font-medium">{employee.emergencyContact.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Relationship</p>
+                      <p className="font-medium">{employee.emergencyContact.relationship}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Phone</p>
+                      <p className="font-medium">{employee.emergencyContact.phone}</p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>
+              Manage this employee's information
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Link href={`/rh/employees/edit/${employee.id}`} className="w-full">
+              <Button variant="outline" className="w-full justify-start">
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Employee
+              </Button>
+            </Link>
+            <Link href={`/rh/leave?employeeId=${employee.id}`} className="w-full">
+              <Button variant="outline" className="w-full justify-start">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" x2="16" y1="2" y2="6"></line><line x1="8" x2="8" y1="2" y2="6"></line><line x1="3" x2="21" y1="10" y2="10"></line><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path><path d="M8 18h.01"></path><path d="M12 18h.01"></path><path d="M16 18h.01"></path></svg>
+                View Leave Requests
+              </Button>
+            </Link>
+            <Button variant="outline" className="w-full justify-start">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              Download Profile
+            </Button>
+          </CardContent>
+          <CardFooter>
+            <div className="w-full space-y-2">
+              <h4 className="text-sm font-medium">Employee Status</h4>
+              <div className="flex gap-2">
+                <Button
+                  variant={employee.status === "ACTIVE" ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1"
+                >
+                  Active
+                </Button>
+                <Button
+                  variant={employee.status === "ON_LEAVE" ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1"
+                >
+                  On Leave
+                </Button>
+                <Button
+                  variant={employee.status === "INACTIVE" ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1"
+                >
+                  Inactive
+                </Button>
+              </div>
+            </div>
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   )
 }

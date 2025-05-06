@@ -182,7 +182,17 @@ export default function EditEmployeePage() {
           throw new Error('Failed to fetch departments')
         }
         const deptData = await deptResponse.json()
-        setDepartments(deptData.departments || [])
+        console.log('Departments data:', deptData)
+
+        // Check if deptData is an array or has a departments property
+        if (Array.isArray(deptData)) {
+          setDepartments(deptData)
+        } else if (deptData.departments) {
+          setDepartments(deptData.departments)
+        } else {
+          console.error('Unexpected departments data format:', deptData)
+          setDepartments([])
+        }
 
         // Fetch positions
         const posResponse = await fetch('/api/rh/positions')
@@ -190,7 +200,17 @@ export default function EditEmployeePage() {
           throw new Error('Failed to fetch positions')
         }
         const posData = await posResponse.json()
-        setPositions(posData.positions || [])
+        console.log('Positions data:', posData)
+
+        // Check if posData is an array or has a positions property
+        if (Array.isArray(posData)) {
+          setPositions(posData)
+        } else if (posData.positions) {
+          setPositions(posData.positions)
+        } else {
+          console.error('Unexpected positions data format:', posData)
+          setPositions([])
+        }
       } catch (err) {
         console.error('Error fetching form data:', err)
         toast.error("Failed to load form data. Please try again.")

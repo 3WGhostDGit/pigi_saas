@@ -18,10 +18,30 @@ export default async function LoginPage() {
 
   const session = await getServerSession(authOptions);
 
-  // If user is already logged in, redirect them away from login page
-  if (session) {
-    // Redirect to the dedicated redirecting page which handles department logic
-    redirect('/auth/redirecting');
+  // If user is already logged in, redirect them based on role/department
+  if (session?.user) {
+    const userRoles = session.user.roles || [];
+    const userDepartment = session.user.department?.toLowerCase() || '';
+
+    // Direct redirection based on role/department without going through the redirecting page
+    if (userRoles.includes('ADMIN')) {
+      redirect('/admin');
+    } else if (userDepartment === 'ressources humaines' || userDepartment === 'human resources') {
+      redirect('/rh');
+    } else if (userDepartment === 'opérations it' || userDepartment === 'it operations') {
+      redirect('/it-support');
+    } else if (userDepartment === 'développement logiciel' || userDepartment === 'software development') {
+      redirect('/dev');
+    } else if (userDepartment === 'technologie' || userDepartment === 'technology') {
+      redirect('/tech');
+    } else if (userDepartment === 'finance') {
+      redirect('/fin');
+    } else if (userDepartment === 'direction générale' || userDepartment === 'general management') {
+      redirect('/dg');
+    } else {
+      // Default fallback if no specific department/role match
+      redirect('/dashboard');
+    }
   }
 
   // If no session, show the login page content
@@ -80,8 +100,8 @@ export default async function LoginPage() {
               <div className="absolute w-72 h-72 -bottom-16 -left-8 border-1 bg-primary rounded-4xl" /> */}
 
 
-            {/* 
-                  Image using Next.js Image component. 
+            {/*
+                  Image using Next.js Image component.
                   IMPORTANT: Make sure 'how.jpeg' has been moved to the /public folder!
                 */}
             <div className="absolute w-72 h-72 md:w-72 md:h-72 -top-18 right-18">

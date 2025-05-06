@@ -21,9 +21,21 @@ export default async function RhLayout({ children }: { children: ReactNode }) {
     redirect('/login?callbackUrl=/rh');
   }
 
-  // 2. Check if the user belongs to the 'RH' department (case-insensitive check)
-  if (session.user.department?.toLowerCase() !== 'ressources humaines') {
-    console.warn(`User ${session.user.email} (Dept: ${session.user.department}) is not authorized for RH dashboard. Redirecting to home.`);
+  // 2. Check if the user has appropriate roles or belongs to the HR department
+  const userRoles = session.user.roles || [];
+  const isAuthorized = userRoles.includes('ADMIN') ||
+                       userRoles.includes('HR_ADMIN') ||
+                       userRoles.includes('HR') ||
+                       userRoles.includes('MANAGER') ||
+                       userRoles.includes('DEPT_MANAGER');
+
+  // Also allow access based on department
+  const userDept = session.user.department?.toLowerCase() || '';
+  const validRHDepts = ['ressources humaines', 'human resources'];
+  const hasDeptAccess = validRHDepts.includes(userDept);
+
+  if (!isAuthorized && !hasDeptAccess) {
+    console.warn(`User ${session.user.email} (Dept: ${session.user.department}, Roles: ${userRoles.join(', ')}) is not authorized for RH dashboard. Redirecting to home.`);
     redirect('/');
   }
 

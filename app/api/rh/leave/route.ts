@@ -26,21 +26,21 @@ export async function GET(req: NextRequest) {
 
     // Build filter conditions
     const where: any = {}
-    
+
     if (employeeId) {
-      where.employeeId = employeeId
+      where.userId = employeeId // Changed from employeeId to userId to match schema
     }
-    
+
     if (status) {
       where.status = status
     }
-    
+
     if (startDate) {
       where.startDate = {
         gte: new Date(startDate),
       }
     }
-    
+
     if (endDate) {
       where.endDate = {
         lte: new Date(endDate),
@@ -55,20 +55,26 @@ export async function GET(req: NextRequest) {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          employee: {
+          user: {
             select: {
               id: true,
-              firstName: true,
-              lastName: true,
+              name: true,
               email: true,
-              department: true,
+              department: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              },
+              jobTitle: true
             },
           },
-          approvedBy: {
+          leaveType: true,
+          approver: {
             select: {
               id: true,
-              firstName: true,
-              lastName: true,
+              name: true,
+              email: true
             },
           },
         },
@@ -105,9 +111,9 @@ export async function POST(req: NextRequest) {
 
     // Get request body
     const body = await req.json()
-    
+
     // Validate required fields
-    const requiredFields = ['employeeId', 'leaveTypeId', 'startDate', 'endDate', 'reason']
+    const requiredFields = ['userId', 'leaveTypeId', 'startDate', 'endDate', 'reason']
     for (const field of requiredFields) {
       if (!body[field]) {
         return NextResponse.json(
@@ -136,20 +142,18 @@ export async function POST(req: NextRequest) {
     // Create new leave request
     const leaveRequest = await prisma.leaveRequest.create({
       data: {
-        employeeId: body.employeeId,
+        userId: body.userId,
         leaveTypeId: body.leaveTypeId,
         startDate,
         endDate,
-        duration: durationDays,
         reason: body.reason,
         status: 'PENDING',
       },
       include: {
-        employee: {
+        user: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
+            name: true,
             email: true,
           },
         },

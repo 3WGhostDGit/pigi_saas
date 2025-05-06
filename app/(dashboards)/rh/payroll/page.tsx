@@ -13,14 +13,6 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -44,21 +36,19 @@ import {
   TabsTrigger
 } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Search,
   PlusCircle,
-  MoreHorizontal,
-  FileEdit,
-  Trash2,
-  Download,
   Filter,
-  Calendar,
-  DollarSign,
+  Download,
+  FileSpreadsheet,
   FileText,
-  CreditCard
+  FileUp
 } from "lucide-react"
+import { DataTable } from "@/components/ui/data-table"
+import { columns, type PayrollEntry } from "./columns"
+import { ViewPayrollDialog } from "./components/view-payroll-dialog"
 
 // Types for payroll data
 type SalaryHistory = {
@@ -83,7 +73,7 @@ type SalaryHistory = {
 }
 
 // Transform salary history to payroll entry
-const transformToPayrollEntry = (salaryHistory: SalaryHistory) => {
+const transformToPayrollEntry = (salaryHistory: SalaryHistory): PayrollEntry => {
   // Calculate mock values for bonus, deductions, and net pay
   const bonus = Math.round(salaryHistory.amount * 0.05);
   const deductions = Math.round(salaryHistory.amount * 0.2);
@@ -91,14 +81,16 @@ const transformToPayrollEntry = (salaryHistory: SalaryHistory) => {
 
   return {
     id: salaryHistory.id,
+    userId: salaryHistory.userId,
     employee: salaryHistory.user.name,
-    employeeId: salaryHistory.userId,
+    email: salaryHistory.user.email,
     department: salaryHistory.user.department?.name || 'N/A',
     position: salaryHistory.user.jobTitle || 'N/A',
     salary: salaryHistory.amount,
     bonus: bonus,
     deductions: deductions,
     netPay: netPay,
+    effectiveDate: salaryHistory.effectiveDate,
     paymentDate: salaryHistory.effectiveDate,
     status: Math.random() > 0.3 ? "PAID" : "PENDING", // Random status for demo
     currency: salaryHistory.currency,
@@ -111,11 +103,11 @@ export default function PayrollPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [isAddPayrollOpen, setIsAddPayrollOpen] = useState(false)
   const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false)
-  const [selectedPayroll, setSelectedPayroll] = useState(null)
-  const [payrollData, setPayrollData] = useState([])
+  const [selectedPayroll, setSelectedPayroll] = useState<PayrollEntry | null>(null)
+  const [payrollData, setPayrollData] = useState<PayrollEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [employees, setEmployees] = useState([])
+  const [error, setError] = useState<string | null>(null)
+  const [employees, setEmployees] = useState<any[]>([])
 
   // Fetch salary history data
   useEffect(() => {
@@ -157,7 +149,17 @@ export default function PayrollPage() {
         }
 
         const data = await response.json()
-        setEmployees(data)
+        // Debug the response data
+        console.log('Employees API response:', data)
+
+        // The API returns an object with an employees property, not an array directly
+        if (data && data.employees && Array.isArray(data.employees)) {
+          console.log('Setting employees array:', data.employees)
+          setEmployees(data.employees)
+        } else {
+          console.error('Unexpected employees data format:', data)
+          toast.error("Unexpected data format from employees API.")
+        }
       } catch (err) {
         console.error('Error fetching employees:', err)
         toast.error("Failed to load employee data.")
@@ -240,15 +242,42 @@ export default function PayrollPage() {
   // Filter payroll data based on search term
   const filteredPayroll = payrollData.filter(item =>
     item.employee.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.userId.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (item.department && item.department.toLowerCase().includes(searchTerm.toLowerCase())) ||
     item.status.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const handleViewDetails = (payroll) => {
+  // Handle view details
+  const handleViewDetails = (payroll: PayrollEntry) => {
     setSelectedPayroll(payroll)
     setIsViewDetailsOpen(true)
   }
+
+  // Handle download payslip
+  const handleDownloadPayslip = (entry: PayrollEntry) => {
+    toast.info(`Downloading payslip for ${entry.employee}...`)
+    // In a real app, this would trigger a download of the payslip
+  }
+
+  // Setup event listeners for custom events from the data table
+  useEffect(() => {
+    const handleViewPayrollEntry = (event: CustomEvent<PayrollEntry>) => {
+      setSelectedPayroll(event.detail)
+      setIsViewDetailsOpen(true)
+    }
+
+    const handleDownloadPayslip = (event: CustomEvent<PayrollEntry>) => {
+      toast.info(`Downloading payslip for ${event.detail.employee}...`)
+    }
+
+    window.addEventListener('view-payroll-entry', handleViewPayrollEntry as EventListener)
+    window.addEventListener('download-payslip', handleDownloadPayslip as EventListener)
+
+    return () => {
+      window.removeEventListener('view-payroll-entry', handleViewPayrollEntry as EventListener)
+      window.removeEventListener('download-payslip', handleDownloadPayslip as EventListener)
+    }
+  }, [])
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -371,388 +400,133 @@ export default function PayrollPage() {
         </div>
         <TabsContent value="all" className="space-y-4">
           <Card>
+            <CardHeader>
+              <CardTitle>All Payroll Entries</CardTitle>
+              <CardDescription>
+                View and manage all payroll entries for employees.
+              </CardDescription>
+            </CardHeader>
             <CardContent className="p-0">
-              {isLoading ? (
-                <div className="flex justify-center items-center h-24">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              {isLoading && !payrollData.length ? (
+                <div className="p-8 flex flex-col space-y-4">
+                  <div className="space-y-2">
+                    {Array(5).fill(0).map((_, i) => (
+                      <div key={i} className="grid grid-cols-6 gap-4 py-2">
+                        {Array(6).fill(0).map((_, j) => (
+                          <Skeleton key={j} className="h-6 w-full" />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : error ? (
                 <div className="flex justify-center items-center h-24 text-destructive">
-                  <p>Error loading payroll data. Please try again.</p>
+                  <p>{error}</p>
                 </div>
-              ) : filteredPayroll.length === 0 ? (
+              ) : payrollData.length === 0 ? (
                 <div className="flex justify-center items-center h-24 text-muted-foreground">
                   <p>No payroll entries found.</p>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Employee</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Position</TableHead>
-                      <TableHead className="text-right">Salary</TableHead>
-                      <TableHead className="text-right">Net Pay</TableHead>
-                      <TableHead>Payment Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPayroll.map((payroll) => (
-                      <TableRow key={payroll.id}>
-                        <TableCell className="font-medium">{payroll.employee}</TableCell>
-                        <TableCell>{payroll.department}</TableCell>
-                        <TableCell>{payroll.position}</TableCell>
-                        <TableCell className="text-right">
-                          {payroll.currency === 'EUR' ? '€' :
-                           payroll.currency === 'USD' ? '$' :
-                           payroll.currency === 'GBP' ? '£' :
-                           payroll.currency === 'JPY' ? '¥' : ''}
-                          {payroll.salary.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {payroll.currency === 'EUR' ? '€' :
-                           payroll.currency === 'USD' ? '$' :
-                           payroll.currency === 'GBP' ? '£' :
-                           payroll.currency === 'JPY' ? '¥' : ''}
-                          {payroll.netPay.toLocaleString()}
-                        </TableCell>
-                        <TableCell>{new Date(payroll.paymentDate).toLocaleDateString('en-US')}</TableCell>
-                        <TableCell>
-                          <Badge variant={payroll.status === 'PAID' ? 'default' : 'outline'}>
-                            {payroll.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Actions</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => handleViewDetails(payroll)}>
-                                <FileText className="mr-2 h-4 w-4" />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <FileEdit className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <CreditCard className="mr-2 h-4 w-4" />
-                                Process Payment
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <DataTable
+                  columns={columns}
+                  data={filteredPayroll}
+                  filterColumn="employee"
+                  filterPlaceholder="Filter by name..."
+                />
               )}
             </CardContent>
           </Card>
         </TabsContent>
         <TabsContent value="pending" className="space-y-4">
           <Card>
+            <CardHeader>
+              <CardTitle>Pending Payroll Entries</CardTitle>
+              <CardDescription>
+                View and manage pending payroll entries that need to be processed.
+              </CardDescription>
+            </CardHeader>
             <CardContent className="p-0">
-              {isLoading ? (
-                <div className="flex justify-center items-center h-24">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              {isLoading && !payrollData.length ? (
+                <div className="p-8 flex flex-col space-y-4">
+                  <div className="space-y-2">
+                    {Array(5).fill(0).map((_, i) => (
+                      <div key={i} className="grid grid-cols-6 gap-4 py-2">
+                        {Array(6).fill(0).map((_, j) => (
+                          <Skeleton key={j} className="h-6 w-full" />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : error ? (
                 <div className="flex justify-center items-center h-24 text-destructive">
-                  <p>Error loading payroll data. Please try again.</p>
+                  <p>{error}</p>
                 </div>
               ) : filteredPayroll.filter(payroll => payroll.status === 'PENDING').length === 0 ? (
                 <div className="flex justify-center items-center h-24 text-muted-foreground">
                   <p>No pending payroll entries found.</p>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Employee</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Position</TableHead>
-                      <TableHead className="text-right">Salary</TableHead>
-                      <TableHead className="text-right">Net Pay</TableHead>
-                      <TableHead>Payment Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPayroll
-                      .filter(payroll => payroll.status === 'PENDING')
-                      .map((payroll) => (
-                        <TableRow key={payroll.id}>
-                          <TableCell className="font-medium">{payroll.employee}</TableCell>
-                          <TableCell>{payroll.department}</TableCell>
-                          <TableCell>{payroll.position}</TableCell>
-                          <TableCell className="text-right">
-                            {payroll.currency === 'EUR' ? '€' :
-                             payroll.currency === 'USD' ? '$' :
-                             payroll.currency === 'GBP' ? '£' :
-                             payroll.currency === 'JPY' ? '¥' : ''}
-                            {payroll.salary.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {payroll.currency === 'EUR' ? '€' :
-                             payroll.currency === 'USD' ? '$' :
-                             payroll.currency === 'GBP' ? '£' :
-                             payroll.currency === 'JPY' ? '¥' : ''}
-                            {payroll.netPay.toLocaleString()}
-                          </TableCell>
-                          <TableCell>{new Date(payroll.paymentDate).toLocaleDateString('en-US')}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {payroll.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Actions</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => handleViewDetails(payroll)}>
-                                  <FileText className="mr-2 h-4 w-4" />
-                                  View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <FileEdit className="mr-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <CreditCard className="mr-2 h-4 w-4" />
-                                  Process Payment
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-destructive">
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
+                <DataTable
+                  columns={columns}
+                  data={filteredPayroll.filter(payroll => payroll.status === 'PENDING')}
+                  filterColumn="employee"
+                  filterPlaceholder="Filter by name..."
+                />
               )}
             </CardContent>
           </Card>
         </TabsContent>
         <TabsContent value="paid" className="space-y-4">
           <Card>
+            <CardHeader>
+              <CardTitle>Paid Payroll Entries</CardTitle>
+              <CardDescription>
+                View all processed and paid payroll entries.
+              </CardDescription>
+            </CardHeader>
             <CardContent className="p-0">
-              {isLoading ? (
-                <div className="flex justify-center items-center h-24">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              {isLoading && !payrollData.length ? (
+                <div className="p-8 flex flex-col space-y-4">
+                  <div className="space-y-2">
+                    {Array(5).fill(0).map((_, i) => (
+                      <div key={i} className="grid grid-cols-6 gap-4 py-2">
+                        {Array(6).fill(0).map((_, j) => (
+                          <Skeleton key={j} className="h-6 w-full" />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : error ? (
                 <div className="flex justify-center items-center h-24 text-destructive">
-                  <p>Error loading payroll data. Please try again.</p>
+                  <p>{error}</p>
                 </div>
               ) : filteredPayroll.filter(payroll => payroll.status === 'PAID').length === 0 ? (
                 <div className="flex justify-center items-center h-24 text-muted-foreground">
                   <p>No paid payroll entries found.</p>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Employee</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Position</TableHead>
-                      <TableHead className="text-right">Salary</TableHead>
-                      <TableHead className="text-right">Net Pay</TableHead>
-                      <TableHead>Payment Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPayroll
-                      .filter(payroll => payroll.status === 'PAID')
-                      .map((payroll) => (
-                        <TableRow key={payroll.id}>
-                          <TableCell className="font-medium">{payroll.employee}</TableCell>
-                          <TableCell>{payroll.department}</TableCell>
-                          <TableCell>{payroll.position}</TableCell>
-                          <TableCell className="text-right">
-                            {payroll.currency === 'EUR' ? '€' :
-                             payroll.currency === 'USD' ? '$' :
-                             payroll.currency === 'GBP' ? '£' :
-                             payroll.currency === 'JPY' ? '¥' : ''}
-                            {payroll.salary.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {payroll.currency === 'EUR' ? '€' :
-                             payroll.currency === 'USD' ? '$' :
-                             payroll.currency === 'GBP' ? '£' :
-                             payroll.currency === 'JPY' ? '¥' : ''}
-                            {payroll.netPay.toLocaleString()}
-                          </TableCell>
-                          <TableCell>{new Date(payroll.paymentDate).toLocaleDateString('en-US')}</TableCell>
-                          <TableCell>
-                            <Badge>
-                              {payroll.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Actions</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => handleViewDetails(payroll)}>
-                                  <FileText className="mr-2 h-4 w-4" />
-                                  View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <FileEdit className="mr-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Download className="mr-2 h-4 w-4" />
-                                  Download Slip
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
+                <DataTable
+                  columns={columns}
+                  data={filteredPayroll.filter(payroll => payroll.status === 'PAID')}
+                  filterColumn="employee"
+                  filterPlaceholder="Filter by name..."
+                />
               )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
-      {/* Payroll Details Dialog */}
-      <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Payroll Details</DialogTitle>
-          </DialogHeader>
-          {selectedPayroll && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-medium text-sm">Employee</h3>
-                  <p>{selectedPayroll.employee}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-sm">Employee ID</h3>
-                  <p>{selectedPayroll.employeeId}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-medium text-sm">Department</h3>
-                  <p>{selectedPayroll.department}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-sm">Position</h3>
-                  <p>{selectedPayroll.position}</p>
-                </div>
-              </div>
-              <Separator />
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <h3 className="font-medium text-sm">Base Salary</h3>
-                  <p>
-                    {selectedPayroll.currency === 'EUR' ? '€' :
-                     selectedPayroll.currency === 'USD' ? '$' :
-                     selectedPayroll.currency === 'GBP' ? '£' :
-                     selectedPayroll.currency === 'JPY' ? '¥' : ''}
-                    {selectedPayroll.salary.toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-sm">Bonus</h3>
-                  <p>
-                    {selectedPayroll.currency === 'EUR' ? '€' :
-                     selectedPayroll.currency === 'USD' ? '$' :
-                     selectedPayroll.currency === 'GBP' ? '£' :
-                     selectedPayroll.currency === 'JPY' ? '¥' : ''}
-                    {selectedPayroll.bonus.toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-sm">Deductions</h3>
-                  <p>
-                    {selectedPayroll.currency === 'EUR' ? '€' :
-                     selectedPayroll.currency === 'USD' ? '$' :
-                     selectedPayroll.currency === 'GBP' ? '£' :
-                     selectedPayroll.currency === 'JPY' ? '¥' : ''}
-                    {selectedPayroll.deductions.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <div className="bg-muted p-3 rounded-md">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-medium">Net Pay</h3>
-                  <p className="text-xl font-bold">
-                    {selectedPayroll.currency === 'EUR' ? '€' :
-                     selectedPayroll.currency === 'USD' ? '$' :
-                     selectedPayroll.currency === 'GBP' ? '£' :
-                     selectedPayroll.currency === 'JPY' ? '¥' : ''}
-                    {selectedPayroll.netPay.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-medium text-sm">Payment Date</h3>
-                  <p>{new Date(selectedPayroll.paymentDate).toLocaleDateString('en-US')}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-sm">Status</h3>
-                  <Badge variant={selectedPayroll.status === 'PAID' ? 'default' : 'outline'}>
-                    {selectedPayroll.status}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsViewDetailsOpen(false)}>Close</Button>
-            {selectedPayroll && selectedPayroll.status === 'PAID' && (
-              <Button>
-                <Download className="mr-2 h-4 w-4" />
-                Download Slip
-              </Button>
-            )}
-            {selectedPayroll && selectedPayroll.status === 'PENDING' && (
-              <Button>
-                <CreditCard className="mr-2 h-4 w-4" />
-                Process Payment
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* View Payroll Dialog */}
+      <ViewPayrollDialog
+        open={isViewDetailsOpen}
+        onOpenChange={setIsViewDetailsOpen}
+        entry={selectedPayroll}
+        onDownloadPayslip={handleDownloadPayslip}
+      />
     </div>
   )
 }

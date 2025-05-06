@@ -26,13 +26,17 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Await params before accessing properties
+    const paramsObj = await params;
+    const id = paramsObj.id;
+
     // Get query parameters
     const url = new URL(request.url);
     const type = url.searchParams.get("type") || "benefits"; // Default to benefits
 
     if (type === "benefits") {
       const benefit = await prisma.benefit.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: {
           employeeBenefits: {
             include: {
@@ -64,7 +68,7 @@ export async function GET(
       return NextResponse.json(benefit);
     } else if (type === "enrollments") {
       const enrollment = await prisma.employeeBenefit.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: {
           user: {
             select: {
@@ -118,6 +122,10 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Await params before accessing properties
+    const paramsObj = await params;
+    const id = paramsObj.id;
+
     // Get query parameters
     const url = new URL(request.url);
     const type = url.searchParams.get("type") || "benefits"; // Default to benefits
@@ -125,7 +133,7 @@ export async function PUT(
     if (type === "benefits") {
       // Check if the benefit exists
       const existingBenefit = await prisma.benefit.findUnique({
-        where: { id: params.id },
+        where: { id },
       });
 
       if (!existingBenefit) {
@@ -140,7 +148,7 @@ export async function PUT(
 
       // Update the benefit
       const updatedBenefit = await prisma.benefit.update({
-        where: { id: params.id },
+        where: { id },
         data: validatedData,
       });
 
@@ -148,7 +156,7 @@ export async function PUT(
     } else if (type === "enrollments") {
       // Check if the enrollment exists
       const existingEnrollment = await prisma.employeeBenefit.findUnique({
-        where: { id: params.id },
+        where: { id },
       });
 
       if (!existingEnrollment) {
@@ -167,7 +175,7 @@ export async function PUT(
 
       // Update the enrollment
       const updatedEnrollment = await prisma.employeeBenefit.update({
-        where: { id: params.id },
+        where: { id },
         data: validatedData,
         include: {
           user: {
@@ -198,7 +206,7 @@ export async function PUT(
         { status: 400 }
       );
     }
-    
+
     console.error("Error updating benefit data:", error);
     return NextResponse.json(
       { error: "Failed to update benefit data" },
@@ -218,6 +226,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Await params before accessing properties
+    const paramsObj = await params;
+    const id = paramsObj.id;
+
     // Get query parameters
     const url = new URL(request.url);
     const type = url.searchParams.get("type") || "benefits"; // Default to benefits
@@ -225,7 +237,7 @@ export async function DELETE(
     if (type === "benefits") {
       // Check if the benefit exists
       const existingBenefit = await prisma.benefit.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: {
           _count: {
             select: {
@@ -252,14 +264,14 @@ export async function DELETE(
 
       // Delete the benefit
       await prisma.benefit.delete({
-        where: { id: params.id },
+        where: { id },
       });
 
       return NextResponse.json({ message: "Benefit deleted successfully" });
     } else if (type === "enrollments") {
       // Check if the enrollment exists
       const existingEnrollment = await prisma.employeeBenefit.findUnique({
-        where: { id: params.id },
+        where: { id },
       });
 
       if (!existingEnrollment) {
@@ -271,7 +283,7 @@ export async function DELETE(
 
       // Delete the enrollment
       await prisma.employeeBenefit.delete({
-        where: { id: params.id },
+        where: { id },
       });
 
       return NextResponse.json({ message: "Benefit enrollment deleted successfully" });

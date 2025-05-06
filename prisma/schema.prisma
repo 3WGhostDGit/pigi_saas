@@ -50,6 +50,10 @@ model User {
   emergencyContacts EmergencyContact[]
   documents         EmployeeDocument[]
 
+  // Department update requests
+  departmentRequests DepartmentUpdateRequest[] @relation("UserDepartmentRequests")
+  processedRequests  DepartmentUpdateRequest[] @relation("ProcessedDepartmentRequests")
+
   @@map("users")
 }
 
@@ -126,8 +130,40 @@ model Department {
   children    Department[] @relation("SubDepartments")
 
   users User[]
+  departmentRequests DepartmentUpdateRequest[]
 
   @@map("departments")
+}
+
+enum DepartmentRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model DepartmentUpdateRequest {
+  id                   String                 @id @default(cuid()) @db.VarChar(255)
+  userId               String                 @db.VarChar(255)
+  requestedDepartmentId String                @db.VarChar(255)
+  currentJobTitle      String?                @db.VarChar(255)
+  requestedJobTitle    String?                @db.VarChar(255)
+  additionalInfo       String?                @db.Text
+  status               DepartmentRequestStatus @default(PENDING)
+  adminNotes           String?                @db.Text
+  createdAt            DateTime               @default(now()) @db.DateTime(0)
+  updatedAt            DateTime               @updatedAt @db.DateTime(0)
+  processedAt          DateTime?              @db.DateTime(0)
+  processedById        String?                @db.VarChar(255)
+
+  user               User       @relation("UserDepartmentRequests", fields: [userId], references: [id], onDelete: Cascade)
+  requestedDepartment Department @relation(fields: [requestedDepartmentId], references: [id])
+  processedBy        User?      @relation("ProcessedDepartmentRequests", fields: [processedById], references: [id])
+
+  @@index([userId])
+  @@index([requestedDepartmentId])
+  @@index([status])
+  @@index([processedById])
+  @@map("department_update_requests")
 }
 
 // --- Module RH Models ---

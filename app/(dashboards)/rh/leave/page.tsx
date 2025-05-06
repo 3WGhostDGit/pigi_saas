@@ -15,7 +15,6 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -23,14 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import {
   Dialog,
   DialogContent,
@@ -40,14 +31,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -60,18 +43,29 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import {
-  Search,
   PlusCircle,
-  MoreHorizontal,
   CheckCircle,
   XCircle,
-  Calendar,
-  Filter
+  Filter,
+  Download
 } from "lucide-react"
+import { DataTable } from "@/components/ui/data-table"
+import { columns, LeaveRequest, getStatusBadgeClass } from "./columns"
+import { Badge } from "@/components/ui/badge"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { LeaveFilterDialog, LeaveFilters } from "@/components/rh/LeaveFilterDialog"
+import Link from "next/link"
 
 // Define the form schema for leave requests
 const leaveRequestSchema = z.object({
-  employeeId: z.string().min(1, "Employee is required"),
+  userId: z.string().min(1, "Employee is required"),
   leaveTypeId: z.string().min(1, "Leave type is required"),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().min(1, "End date is required"),
@@ -96,44 +90,10 @@ type Employee = {
   };
 }
 
-type LeaveRequest = {
-  id: string;
-  employeeId: string;
-  leaveTypeId: string;
-  startDate: string;
-  endDate: string;
-  duration: number;
-  reason: string;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
-  createdAt: string;
-  updatedAt: string;
-  approvedById?: string;
-  approvedAt?: string;
-  employee: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    department?: {
-      id: string;
-      name: string;
-    };
-  };
-  leaveType: {
-    id: string;
-    name: string;
-    description?: string;
-  };
-  approvedBy?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-  };
-}
+// Import the LeaveRequest type from columns.tsx
 
 export default function LeavePage() {
   const { status } = useSession()
-  const [searchTerm, setSearchTerm] = useState('')
   const [isAddLeaveOpen, setIsAddLeaveOpen] = useState(false)
   const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false)
   const [selectedLeave, setSelectedLeave] = useState<LeaveRequest | null>(null)
@@ -145,18 +105,29 @@ export default function LeavePage() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeFilters, setActiveFilters] = useState<LeaveFilters>({})
+  const [isFilterApplied, setIsFilterApplied] = useState(false)
 
   // Form for adding new leave requests
   const form = useForm({
     resolver: zodResolver(leaveRequestSchema),
     defaultValues: {
-      employeeId: "",
+      userId: "",
       leaveTypeId: "",
       startDate: "",
       endDate: "",
       reason: "",
     },
   })
+
+  // Get employeeId from URL if present
+  const getEmployeeIdFromUrl = () => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('employeeId') || undefined;
+    }
+    return undefined;
+  }
 
   // Fetch leave requests from API
   useEffect(() => {
@@ -165,7 +136,12 @@ export default function LeavePage() {
 
       try {
         setIsLoading(true)
-        const response = await fetch('/api/rh/leave')
+        const employeeId = getEmployeeIdFromUrl();
+        const url = employeeId
+          ? `/api/rh/leave?employeeId=${employeeId}`
+          : '/api/rh/leave';
+
+        const response = await fetch(url)
 
         if (!response.ok) {
           throw new Error('Failed to fetch leave requests')
@@ -174,6 +150,11 @@ export default function LeavePage() {
         const data = await response.json()
         setLeaveRequests(data.leaveRequests || [])
         setError(null)
+
+        // If filtering by employee, set the tab to 'all' to show all their requests
+        if (employeeId) {
+          setCurrentTab('all');
+        }
       } catch (err) {
         console.error('Error fetching leave requests:', err)
         setError('Failed to load leave request data. Please try again.')
@@ -253,7 +234,12 @@ export default function LeavePage() {
       form.reset()
 
       // Refresh leave requests
-      const refreshResponse = await fetch('/api/rh/leave')
+      const employeeId = getEmployeeIdFromUrl();
+      const refreshUrl = employeeId
+        ? `/api/rh/leave?employeeId=${employeeId}`
+        : '/api/rh/leave';
+
+      const refreshResponse = await fetch(refreshUrl)
       if (refreshResponse.ok) {
         const refreshData = await refreshResponse.json()
         setLeaveRequests(refreshData.leaveRequests || [])
@@ -287,7 +273,12 @@ export default function LeavePage() {
       setIsViewDetailsOpen(false)
 
       // Refresh leave requests
-      const refreshResponse = await fetch('/api/rh/leave')
+      const employeeId = getEmployeeIdFromUrl();
+      const refreshUrl = employeeId
+        ? `/api/rh/leave?employeeId=${employeeId}`
+        : '/api/rh/leave';
+
+      const refreshResponse = await fetch(refreshUrl)
       if (refreshResponse.ok) {
         const refreshData = await refreshResponse.json()
         setLeaveRequests(refreshData.leaveRequests || [])
@@ -298,43 +289,77 @@ export default function LeavePage() {
     }
   }
 
-  // Filter leave requests based on search term and current tab
-  const filteredLeaveRequests = leaveRequests.filter(request => {
-    // Filter by search term
-    const matchesSearch =
-      `${request.employee.firstName} ${request.employee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.leaveType.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.status.toLowerCase().includes(searchTerm.toLowerCase())
+  // Apply filters to leave requests
+  const handleApplyFilters = (filters: LeaveFilters) => {
+    setActiveFilters(filters);
+    setIsFilterApplied(true);
+  };
 
-    // Filter by tab
-    const matchesTab =
-      currentTab === 'all' ||
-      (currentTab === 'pending' && request.status === 'PENDING') ||
-      (currentTab === 'approved' && request.status === 'APPROVED') ||
-      (currentTab === 'rejected' && request.status === 'REJECTED')
+  // Reset filters
+  const handleResetFilters = () => {
+    setActiveFilters({});
+    setIsFilterApplied(false);
+  };
 
-    return matchesSearch && matchesTab
-  })
+  // Filter leave requests based on tab and active filters
+  const getFilteredLeaveRequests = (tab: string) => {
+    return leaveRequests.filter(request => {
+      // First filter by tab
+      const matchesTab = tab === 'all' ||
+        (tab === 'pending' && request.status === 'PENDING') ||
+        (tab === 'approved' && request.status === 'APPROVED') ||
+        (tab === 'rejected' && request.status === 'REJECTED');
+
+      if (!matchesTab) return false;
+
+      // Then apply additional filters if they exist
+      if (!isFilterApplied) return true;
+
+      // Filter by department
+      if (activeFilters.departmentId && request.user.department?.id !== activeFilters.departmentId) {
+        return false;
+      }
+
+      // Filter by employee
+      if (activeFilters.employeeId && request.userId !== activeFilters.employeeId) {
+        return false;
+      }
+
+      // Filter by leave type
+      if (activeFilters.leaveTypeId && request.leaveTypeId !== activeFilters.leaveTypeId) {
+        return false;
+      }
+
+      // Filter by date range
+      if (activeFilters.startDateFrom) {
+        const fromDate = new Date(activeFilters.startDateFrom);
+        const requestDate = new Date(request.startDate);
+        if (requestDate < fromDate) return false;
+      }
+
+      if (activeFilters.startDateTo) {
+        const toDate = new Date(activeFilters.startDateTo);
+        const requestDate = new Date(request.startDate);
+        if (requestDate > toDate) return false;
+      }
+
+      // Filter by status (if not already filtered by tab)
+      if (activeFilters.status && activeFilters.status !== 'all' && request.status !== activeFilters.status) {
+        return false;
+      }
+
+      return true;
+    });
+  };
+
+  const filteredLeaveRequests = getFilteredLeaveRequests(currentTab);
 
   const handleViewDetails = (leaveRequest: LeaveRequest) => {
     setSelectedLeave(leaveRequest)
     setIsViewDetailsOpen(true)
   }
 
-  const getStatusBadgeClass = (status) => {
-    switch(status) {
-      case 'APPROVED':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-      case 'REJECTED':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-      case 'CANCELLED':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-    }
-  }
+  // Status badge class is now handled in columns.tsx
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -361,7 +386,7 @@ export default function LeavePage() {
                     <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
-                        name="employeeId"
+                        name="userId"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Employee</FormLabel>
@@ -468,7 +493,11 @@ export default function LeavePage() {
           </Dialog>
         </div>
       </div>
-      <Tabs defaultValue="all" className="space-y-4">
+      <Tabs
+        defaultValue="all"
+        className="space-y-4"
+        onValueChange={(value) => setCurrentTab(value)}
+      >
         <div className="flex justify-between">
           <TabsList>
             <TabsTrigger value="all">All Requests</TabsTrigger>
@@ -478,23 +507,45 @@ export default function LeavePage() {
           </TabsList>
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search leave requests..."
-                className="w-[200px] sm:w-[300px] pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+              <LeaveFilterDialog
+                onFilter={handleApplyFilters}
+                onReset={handleResetFilters}
               />
+              {isFilterApplied && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
+              )}
             </div>
-            <Button variant="outline" size="sm" className="h-9 gap-1">
-              <Filter className="h-4 w-4" />
-              Filter
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 gap-1">
+                  <Download className="h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[200px]">
+                <DropdownMenuLabel>Export Options</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  Export as Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  Export as PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         <TabsContent value="all" className="space-y-4">
           <Card>
+            <CardHeader>
+              <CardTitle>All Leave Requests</CardTitle>
+              <CardDescription>
+                View and manage all leave requests from employees.
+              </CardDescription>
+            </CardHeader>
             <CardContent className="p-0">
               {isLoading ? (
                 <div className="p-4">
@@ -523,86 +574,169 @@ export default function LeavePage() {
                   <p>No leave requests found.</p>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Employee</TableHead>
-                      <TableHead>Leave Type</TableHead>
-                      <TableHead>Start Date</TableHead>
-                      <TableHead>End Date</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Submitted</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredLeaveRequests.map((request) => (
-                      <TableRow key={request.id}>
-                        <TableCell className="font-medium">
-                          {request.employee.firstName} {request.employee.lastName}
-                        </TableCell>
-                        <TableCell>{request.leaveType.name}</TableCell>
-                        <TableCell>{new Date(request.startDate).toLocaleDateString()}</TableCell>
-                        <TableCell>{new Date(request.endDate).toLocaleDateString()}</TableCell>
-                        <TableCell>{request.duration} days</TableCell>
-                        <TableCell>
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeClass(request.status)}`}>
-                            {request.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>{new Date(request.createdAt).toLocaleDateString()}</TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => handleViewDetails(request)}>
-                                View Details
-                              </DropdownMenuItem>
-                              {request.status === 'PENDING' && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    className="text-green-600"
-                                    onClick={() => handleLeaveAction(request.id, 'APPROVED')}
-                                  >
-                                    <CheckCircle className="mr-2 h-4 w-4" />
-                                    Approve
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="text-red-600"
-                                    onClick={() => handleLeaveAction(request.id, 'REJECTED')}
-                                  >
-                                    <XCircle className="mr-2 h-4 w-4" />
-                                    Reject
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <DataTable
+                  columns={columns(
+                    handleViewDetails,
+                    (id) => handleLeaveAction(id, 'APPROVED'),
+                    (id) => handleLeaveAction(id, 'REJECTED')
+                  )}
+                  data={filteredLeaveRequests}
+                  filterColumn="employee"
+                  filterPlaceholder="Search by employee name..."
+                />
               )}
             </CardContent>
           </Card>
         </TabsContent>
         <TabsContent value="pending" className="space-y-4">
-          {/* Similar content as "all" but filtered for pending requests */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Leave Requests</CardTitle>
+              <CardDescription>
+                Review and process pending leave requests from employees.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="p-4">
+                  <div className="space-y-3">
+                    <Skeleton className="h-8 w-full" />
+                    <div className="grid grid-cols-8 gap-4">
+                      {Array(8).fill(0).map((_, i) => (
+                        <Skeleton key={i} className="h-4 w-full" />
+                      ))}
+                    </div>
+                    {Array(5).fill(0).map((_, i) => (
+                      <div key={i} className="grid grid-cols-8 gap-4 py-2">
+                        {Array(8).fill(0).map((_, j) => (
+                          <Skeleton key={j} className="h-6 w-full" />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : error ? (
+                <div className="flex justify-center items-center h-24 text-destructive">
+                  <p>{error}</p>
+                </div>
+              ) : getFilteredLeaveRequests('pending').length === 0 ? (
+                <div className="flex justify-center items-center h-24 text-muted-foreground">
+                  <p>No pending leave requests found.</p>
+                </div>
+              ) : (
+                <DataTable
+                  columns={columns(
+                    handleViewDetails,
+                    (id) => handleLeaveAction(id, 'APPROVED'),
+                    (id) => handleLeaveAction(id, 'REJECTED')
+                  )}
+                  data={getFilteredLeaveRequests('pending')}
+                  filterColumn="employee"
+                  filterPlaceholder="Search by employee name..."
+                />
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
         <TabsContent value="approved" className="space-y-4">
-          {/* Similar content as "all" but filtered for approved requests */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Approved Leave Requests</CardTitle>
+              <CardDescription>
+                View all approved leave requests from employees.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="p-4">
+                  <div className="space-y-3">
+                    <Skeleton className="h-8 w-full" />
+                    <div className="grid grid-cols-8 gap-4">
+                      {Array(8).fill(0).map((_, i) => (
+                        <Skeleton key={i} className="h-4 w-full" />
+                      ))}
+                    </div>
+                    {Array(5).fill(0).map((_, i) => (
+                      <div key={i} className="grid grid-cols-8 gap-4 py-2">
+                        {Array(8).fill(0).map((_, j) => (
+                          <Skeleton key={j} className="h-6 w-full" />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : error ? (
+                <div className="flex justify-center items-center h-24 text-destructive">
+                  <p>{error}</p>
+                </div>
+              ) : getFilteredLeaveRequests('approved').length === 0 ? (
+                <div className="flex justify-center items-center h-24 text-muted-foreground">
+                  <p>No approved leave requests found.</p>
+                </div>
+              ) : (
+                <DataTable
+                  columns={columns(
+                    handleViewDetails,
+                    (id) => handleLeaveAction(id, 'APPROVED'),
+                    (id) => handleLeaveAction(id, 'REJECTED')
+                  )}
+                  data={getFilteredLeaveRequests('approved')}
+                  filterColumn="employee"
+                  filterPlaceholder="Search by employee name..."
+                />
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
         <TabsContent value="rejected" className="space-y-4">
-          {/* Similar content as "all" but filtered for rejected requests */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Rejected Leave Requests</CardTitle>
+              <CardDescription>
+                View all rejected leave requests from employees.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="p-4">
+                  <div className="space-y-3">
+                    <Skeleton className="h-8 w-full" />
+                    <div className="grid grid-cols-8 gap-4">
+                      {Array(8).fill(0).map((_, i) => (
+                        <Skeleton key={i} className="h-4 w-full" />
+                      ))}
+                    </div>
+                    {Array(5).fill(0).map((_, i) => (
+                      <div key={i} className="grid grid-cols-8 gap-4 py-2">
+                        {Array(8).fill(0).map((_, j) => (
+                          <Skeleton key={j} className="h-6 w-full" />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : error ? (
+                <div className="flex justify-center items-center h-24 text-destructive">
+                  <p>{error}</p>
+                </div>
+              ) : getFilteredLeaveRequests('rejected').length === 0 ? (
+                <div className="flex justify-center items-center h-24 text-muted-foreground">
+                  <p>No rejected leave requests found.</p>
+                </div>
+              ) : (
+                <DataTable
+                  columns={columns(
+                    handleViewDetails,
+                    (id) => handleLeaveAction(id, 'APPROVED'),
+                    (id) => handleLeaveAction(id, 'REJECTED')
+                  )}
+                  data={getFilteredLeaveRequests('rejected')}
+                  filterColumn="employee"
+                  filterPlaceholder="Search by employee name..."
+                />
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
@@ -611,84 +745,137 @@ export default function LeavePage() {
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Leave Request Details</DialogTitle>
+            <DialogDescription>
+              Viewing details for leave request.
+            </DialogDescription>
+            <div className="mt-2 text-right">
+              {selectedLeave && (
+                <Link
+                  href={`/rh/leave/view/${selectedLeave.id}`}
+                  className="text-sm text-primary hover:underline"
+                  onClick={() => setIsViewDetailsOpen(false)}
+                >
+                  Open in full page
+                </Link>
+              )}
+            </div>
           </DialogHeader>
           {selectedLeave && (
-            <div className="grid gap-4 py-4">
+            <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h3 className="font-medium text-sm">Employee</h3>
-                  <p>{selectedLeave.employee.firstName} {selectedLeave.employee.lastName}</p>
+                  <p className="text-sm font-medium mb-1">Employee</p>
+                  <p className="text-sm font-semibold">
+                    {selectedLeave.user.name}
+                  </p>
                 </div>
                 <div>
-                  <h3 className="font-medium text-sm">Leave Type</h3>
-                  <p>{selectedLeave.leaveType.name}</p>
+                  <p className="text-sm font-medium mb-1">Leave Type</p>
+                  <p className="text-sm">
+                    {selectedLeave.leaveType.name}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium mb-1">Start Date</p>
+                  <p className="text-sm">
+                    {new Date(selectedLeave.startDate).toLocaleDateString('fr-CA', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium mb-1">End Date</p>
+                  <p className="text-sm">
+                    {new Date(selectedLeave.endDate).toLocaleDateString('fr-CA', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium mb-1">Duration</p>
+                  <p className="text-sm">
+                    {Math.ceil((new Date(selectedLeave.endDate).getTime() - new Date(selectedLeave.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} days
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium mb-1">Status</p>
+                  <p className="text-sm">
+                    <Badge
+                      variant={selectedLeave.status === 'APPROVED' ? 'default' :
+                              selectedLeave.status === 'REJECTED' ? 'destructive' : 'outline'}
+                      className={selectedLeave.status === 'PENDING' ?
+                                'text-yellow-700 bg-yellow-100/80 border-yellow-300 dark:text-yellow-400 dark:bg-yellow-700/30 dark:border-yellow-600' :
+                                selectedLeave.status === 'APPROVED' ?
+                                'text-green-700 bg-green-100/80 border-green-300 dark:text-green-300 dark:bg-green-700/30 dark:border-green-600' : ''}
+                    >
+                      {selectedLeave.status.toLowerCase()}
+                    </Badge>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium mb-1">Submitted On</p>
+                  <p className="text-sm">
+                    {new Date(selectedLeave.createdAt).toLocaleDateString('fr-CA', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </p>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <h3 className="font-medium text-sm">Start Date</h3>
-                  <p>{new Date(selectedLeave.startDate).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-sm">End Date</h3>
-                  <p>{new Date(selectedLeave.endDate).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-sm">Duration</h3>
-                  <p>{selectedLeave.duration} days</p>
-                </div>
-              </div>
+
               <div>
-                <h3 className="font-medium text-sm">Reason</h3>
-                <p>{selectedLeave.reason}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-medium text-sm">Status</h3>
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeClass(selectedLeave.status)}`}>
-                    {selectedLeave.status}
-                  </span>
-                </div>
-                <div>
-                  <h3 className="font-medium text-sm">Submitted On</h3>
-                  <p>{new Date(selectedLeave.createdAt).toLocaleDateString()}</p>
+                <p className="text-sm font-medium mb-1">Reason for Leave</p>
+                <div className="bg-muted p-3 rounded-md text-sm">
+                  {selectedLeave.reason || 'No reason provided'}
                 </div>
               </div>
-              {selectedLeave.approvedBy && (
+
+              {selectedLeave.approver && selectedLeave.approvedAt && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h3 className="font-medium text-sm">Approved/Rejected By</h3>
-                    <p>{selectedLeave.approvedBy.firstName} {selectedLeave.approvedBy.lastName}</p>
+                    <p className="text-sm font-medium mb-1">Approved/Rejected By</p>
+                    <p className="text-sm">{selectedLeave.approver.name}</p>
                   </div>
                   <div>
-                    <h3 className="font-medium text-sm">Decision Date</h3>
-                    <p>{new Date(selectedLeave.approvedAt).toLocaleDateString()}</p>
+                    <p className="text-sm font-medium mb-1">Decision Date</p>
+                    <p className="text-sm">
+                      {new Date(selectedLeave.approvedAt).toLocaleDateString('fr-CA', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </p>
                   </div>
                 </div>
               )}
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsViewDetailsOpen(false)}>
-              Close
-            </Button>
+          <DialogFooter className="flex justify-between items-center">
+            <Button variant="outline" onClick={() => setIsViewDetailsOpen(false)}>Close</Button>
             {selectedLeave && selectedLeave.status === 'PENDING' && (
-              <>
+              <div className="flex gap-2">
                 <Button
-                  variant="destructive"
+                  variant="outline"
+                  className="border-red-200 hover:bg-red-100 hover:text-red-600"
                   onClick={() => handleLeaveAction(selectedLeave.id, 'REJECTED')}
                 >
-                  <XCircle className="mr-2 h-4 w-4" />
+                  <XCircle className="mr-2 h-4 w-4 text-red-600" />
                   Reject
                 </Button>
                 <Button
-                  variant="default"
+                  variant="outline"
+                  className="border-green-200 hover:bg-green-100 hover:text-green-600"
                   onClick={() => handleLeaveAction(selectedLeave.id, 'APPROVED')}
                 >
-                  <CheckCircle className="mr-2 h-4 w-4" />
+                  <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
                   Approve
                 </Button>
-              </>
+              </div>
             )}
           </DialogFooter>
         </DialogContent>

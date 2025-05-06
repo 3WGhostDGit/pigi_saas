@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { DataTable } from "@/components/ui/data-table"
@@ -427,7 +430,16 @@ export default function EmployeesPage() {
       }
       const deptData = await deptResponse.json()
       console.log('Departments data:', deptData)
-      setDepartments(deptData || [])
+
+      // Check if deptData is an array or has a departments property
+      if (Array.isArray(deptData)) {
+        setDepartments(deptData)
+      } else if (deptData.departments) {
+        setDepartments(deptData.departments)
+      } else {
+        console.error('Unexpected departments data format:', deptData)
+        setDepartments([])
+      }
 
       // Fetch positions
       const posResponse = await fetch('/api/rh/positions')
@@ -436,7 +448,16 @@ export default function EmployeesPage() {
       }
       const posData = await posResponse.json()
       console.log('Positions data:', posData)
-      setPositions(posData || [])
+
+      // Check if posData is an array or has a positions property
+      if (Array.isArray(posData)) {
+        setPositions(posData)
+      } else if (posData.positions) {
+        setPositions(posData.positions)
+      } else {
+        console.error('Unexpected positions data format:', posData)
+        setPositions([])
+      }
     } catch (err) {
       console.error('Error fetching form data:', err)
       toast.error("Failed to load form data. Please try again.")
@@ -1317,6 +1338,12 @@ export default function EmployeesPage() {
         </div>
         <TabsContent value="all" className="space-y-4">
           <Card>
+            <CardHeader>
+              <CardTitle>All Employees</CardTitle>
+              <CardDescription>
+                View and manage all employees in the organization.
+              </CardDescription>
+            </CardHeader>
             <CardContent className="p-0">
               {isLoading ? (
                 <div className="p-4">
@@ -1348,8 +1375,8 @@ export default function EmployeesPage() {
                 <DataTable
                   columns={columns}
                   data={filteredEmployees}
-                  filterColumn="email"
-                  filterPlaceholder="Filter by email..."
+                  filterColumn="name"
+                  filterPlaceholder="Filter by name..."
                 />
               )}
             </CardContent>
@@ -1358,6 +1385,12 @@ export default function EmployeesPage() {
         <TabsContent value="active" className="space-y-4">
           {/* Content for active employees is handled by the filter */}
           <Card>
+            <CardHeader>
+              <CardTitle>Active Employees</CardTitle>
+              <CardDescription>
+                View and manage all currently active employees.
+              </CardDescription>
+            </CardHeader>
             <CardContent className="p-0">
               {isLoading ? (
                 <div className="p-4">
@@ -1389,8 +1422,8 @@ export default function EmployeesPage() {
                 <DataTable
                   columns={columns}
                   data={filteredEmployees}
-                  filterColumn="email"
-                  filterPlaceholder="Filter by email..."
+                  filterColumn="name"
+                  filterPlaceholder="Filter by name..."
                 />
               )}
             </CardContent>
@@ -1399,6 +1432,12 @@ export default function EmployeesPage() {
         <TabsContent value="onLeave" className="space-y-4">
           {/* Content for employees on leave is handled by the filter */}
           <Card>
+            <CardHeader>
+              <CardTitle>Employees on Leave</CardTitle>
+              <CardDescription>
+                View and manage all employees currently on leave.
+              </CardDescription>
+            </CardHeader>
             <CardContent className="p-0">
               {isLoading ? (
                 <div className="p-4">
@@ -1430,8 +1469,8 @@ export default function EmployeesPage() {
                 <DataTable
                   columns={columns}
                   data={filteredEmployees}
-                  filterColumn="email"
-                  filterPlaceholder="Filter by email..."
+                  filterColumn="name"
+                  filterPlaceholder="Filter by name..."
                 />
               )}
             </CardContent>
@@ -1440,6 +1479,12 @@ export default function EmployeesPage() {
         <TabsContent value="terminated" className="space-y-4">
           {/* Content for terminated employees is handled by the filter */}
           <Card>
+            <CardHeader>
+              <CardTitle>Terminated Employees</CardTitle>
+              <CardDescription>
+                View all terminated or inactive employees.
+              </CardDescription>
+            </CardHeader>
             <CardContent className="p-0">
               {isLoading ? (
                 <div className="p-4">
@@ -1471,8 +1516,8 @@ export default function EmployeesPage() {
                 <DataTable
                   columns={columns}
                   data={filteredEmployees}
-                  filterColumn="email"
-                  filterPlaceholder="Filter by email..."
+                  filterColumn="name"
+                  filterPlaceholder="Filter by name..."
                 />
               )}
             </CardContent>

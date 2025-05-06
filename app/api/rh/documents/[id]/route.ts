@@ -33,8 +33,12 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Await params before accessing properties
+    const paramsObj = await params;
+    const id = paramsObj.id;
+
     const document = await prisma.employeeDocument.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: {
           select: {
@@ -81,9 +85,13 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Await params before accessing properties
+    const paramsObj = await params;
+    const id = paramsObj.id;
+
     // Check if the document exists
     const existingDocument = await prisma.employeeDocument.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingDocument) {
@@ -98,7 +106,7 @@ export async function PUT(
 
     // Update the document
     const updatedDocument = await prisma.employeeDocument.update({
-      where: { id: params.id },
+      where: { id },
       data: validatedData,
       include: {
         user: {
@@ -118,7 +126,7 @@ export async function PUT(
         { status: 400 }
       );
     }
-    
+
     console.error("Error updating document:", error);
     return NextResponse.json(
       { error: "Failed to update document" },
@@ -138,9 +146,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Await params before accessing properties
+    const paramsObj = await params;
+    const id = paramsObj.id;
+
     // Check if the document exists
     const existingDocument = await prisma.employeeDocument.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingDocument) {
@@ -152,7 +164,7 @@ export async function DELETE(
 
     // Delete the document
     await prisma.employeeDocument.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "Document deleted successfully" });

@@ -7,12 +7,20 @@ import { Loader2 } from 'lucide-react'; // Assuming you use lucide-react
 
 // Define a mapping from department names (case-insensitive) to routes
 const departmentRoutes: Record<string, string> = {
+  // French department names
   'ressources humaines': '/rh',
-  'opérations it': '/it-support', // Map 'Opérations IT' to the /it-support route
+  'opérations it': '/it-support',
   'développement logiciel': '/dev',
   'technologie': '/tech',
   'finance': '/fin',
   'direction générale': '/dg',
+
+  // English department names
+  'human resources': '/rh',
+  'it operations': '/it-support',
+  'software development': '/dev',
+  'technology': '/tech',
+  'general management': '/dg',
   // Add other departments and their routes here if needed
 };
 
@@ -43,7 +51,7 @@ export default function RedirectingPage() {
     console.log('[Redirect Debug] Department Route Exists?:', !!departmentRoutes[userDepartment]);
     // --- End Debug Logging ---
 
-    let redirectPath = '/'; // Default path
+    let redirectPath = '/dashboard'; // Default path is now the dashboard
 
     // Check for ADMIN role first (higher priority)
     if (userRoles.includes('ADMIN')) {
@@ -67,4 +75,4 @@ export default function RedirectingPage() {
       <p className="ml-2">Loading your dashboard...</p>
     </div>
   );
-} 
+}

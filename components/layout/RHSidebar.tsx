@@ -19,6 +19,7 @@ import {
     Building2,       // Organization / Departments
     SlidersHorizontal, // Settings (alternative to Settings icon)
     ChevronsUpDown,  // Header toggle icon
+    FileEdit,        // Department Requests
     // --- Choose ONE icon for the main portal header ---
     Building,        // Example: Generic Building Icon for RH Portal
     // PanelLeft,    // Original Placeholder
@@ -36,6 +37,7 @@ const rhNavLinks: NavLink[] = [
   { title: 'Documents', href: '/rh/documents', icon: FolderArchive },
   { title: 'Recruitment', href: '/rh/recruitment', icon: Briefcase }, // Kept as standard function
   { title: 'Organization', href: '/rh/organization', icon: Building2 },
+  { title: 'Department Requests', href: '/rh/department-requests', icon: FileEdit },
   { title: 'Settings', href: '/rh/settings', icon: SlidersHorizontal }, // Or Settings
 ];
 // ---------

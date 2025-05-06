@@ -30,6 +30,10 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
+        {/* Debug console script - only loaded in development */}
+        {process.env.NODE_ENV === 'development' && (
+          <script src="/debug-console.js" />
+        )}
       </head>
       <body
         className={cn(
